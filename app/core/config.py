@@ -10,9 +10,10 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/inventory_db"
+    DATABASE_URL: str
     API_VERSION: str = "1.0.0"
     PROJECT_NAME: str = "Inventory Management API"
 

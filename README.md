@@ -17,7 +17,7 @@ This project provides the foundation for an **Inventory Management System** back
 
 - Python 3.12+
 - pip
-- PostgreSQL (optional for Phase 1; database connection is configured but not required to run the API)
+- Docker and Docker Compose
 
 ## Installation
 
@@ -47,17 +47,57 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` as needed. Default values are suitable for local development.
+The `.env` file includes variables for both Docker Compose (`POSTGRES_*`) and the FastAPI application (`DATABASE_URL`, `PROJECT_NAME`, `API_VERSION`). Default values are suitable for local development.
+
+## Docker (PostgreSQL)
+
+Start PostgreSQL before running the API. The database runs on host port **5433** (container port 5432) to avoid conflicts with a local PostgreSQL instance on port 5432.
+
+Start PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+View running containers:
+
+```bash
+docker ps
+```
+
+View logs:
+
+```bash
+docker logs inventory_postgres
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Remove containers and volume:
+
+```bash
+docker compose down -v
+```
+
+Connect to PostgreSQL:
+
+```bash
+docker exec -it inventory_postgres psql -U inventory_user -d inventory_db
+```
 
 ## Running the API
 
-Start the development server with Uvicorn:
+Start PostgreSQL first (`docker compose up -d`), then start the development server with Uvicorn:
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.
+The API will be available at `http://localhost:8000`. Database tables are created automatically on startup.
 
 ## API Documentation
 
@@ -97,6 +137,7 @@ inventory-management-backend/
 │   ├── services/      # Business logic layer
 │   └── main.py        # FastAPI application entry point
 ├── tests/
+├── docker-compose.yml
 ├── requirements.txt
 ├── .env.example
 └── README.md
