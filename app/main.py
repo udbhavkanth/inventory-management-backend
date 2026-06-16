@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.customer_routes import router as customer_router
+from app.api.dashboard_routes import router as dashboard_router
 from app.api.order_routes import router as order_router
 from app.api.product_routes import router as product_router
 from app.api.routes import router
@@ -31,3 +32,4 @@ app.include_router(router)
 app.include_router(product_router, prefix="/products", tags=["Products"])
 app.include_router(customer_router, prefix="/customers", tags=["Customers"])
 app.include_router(order_router, prefix="/orders", tags=["Orders"])
+app.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
