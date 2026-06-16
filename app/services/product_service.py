@@ -72,6 +72,11 @@ def update_product(db: Session, product_id: UUID, payload: ProductUpdate) -> Pro
 
     if "name" in update_data and isinstance(update_data["name"], str):
         update_data["name"] = update_data["name"].strip()
+        if not update_data["name"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Product name cannot be empty",
+            )
 
     for field_name, field_value in update_data.items():
         setattr(product, field_name, field_value)
@@ -95,6 +100,12 @@ def delete_product(db: Session, product_id: UUID) -> None:
     try:
         db.delete(product)
         db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product has existing orders",
+        ) from exc
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Integer, Numeric, Uuid
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -13,6 +13,9 @@ class OrderItem(Base):
     """Line item within an order."""
 
     __tablename__ = "order_items"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_order_items_quantity_positive"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid,

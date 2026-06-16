@@ -6,7 +6,7 @@ from datetime import datetime
 from app.core.timezone import UTC
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Integer, Numeric, String, Uuid
+from sqlalchemy import CheckConstraint, DateTime, Integer, Numeric, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -16,6 +16,10 @@ class Product(Base):
     """Product catalog item with inventory tracking."""
 
     __tablename__ = "products"
+    __table_args__ = (
+        CheckConstraint("stock_quantity >= 0", name="ck_products_stock_quantity_non_negative"),
+        CheckConstraint("price > 0", name="ck_products_price_positive"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
