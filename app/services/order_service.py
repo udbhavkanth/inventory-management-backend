@@ -11,10 +11,23 @@ from app.models.customer import Customer
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.product import Product
-from app.schemas.order import OrderCreate
+from app.schemas.order import OrderCreate, OrderDetailResponse, OrderListResponse
 
 
-def create_order(db: Session, payload: OrderCreate) -> Order:
+def _fetch_order_by_id(db: Session, order_id: UUID) -> Order:
+    """Fetch one order ORM instance with items and customer loaded."""
+    statement = (
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.customer))
+        .where(Order.id == order_id)
+    )
+    order = db.scalar(statement)
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+def create_order(db: Session, payload: OrderCreate) -> OrderDetailResponse:
     """Create an order atomically and reduce inventory."""
     try:
         customer = db.scalar(select(Customer).where(Customer.id == payload.customer_id))
@@ -63,7 +76,8 @@ def create_order(db: Session, payload: OrderCreate) -> Order:
         db.add(order)
         db.commit()
         db.refresh(order, attribute_names=["items"])
-        return order
+        order.customer = customer
+        return OrderDetailResponse.from_order(order)
     except HTTPException:
         db.rollback()
         raise
@@ -75,31 +89,29 @@ def create_order(db: Session, payload: OrderCreate) -> Order:
         ) from exc
 
 
-def get_orders(db: Session, skip: int = 0, limit: int = 10) -> list[Order]:
+def get_orders(db: Session, skip: int = 0, limit: int = 10) -> list[OrderListResponse]:
     """Fetch orders with pagination."""
     statement = (
         select(Order)
-        .options(selectinload(Order.items))
+        .options(selectinload(Order.customer))
         .order_by(Order.created_at.desc(), Order.id)
         .offset(skip)
         .limit(limit)
     )
-    return list(db.scalars(statement).all())
+    orders = list(db.scalars(statement).all())
+    return [OrderListResponse.from_order(order) for order in orders]
 
 
-def get_order_by_id(db: Session, order_id: UUID) -> Order:
+def get_order_by_id(db: Session, order_id: UUID) -> OrderDetailResponse:
     """Fetch one order by id or raise 404."""
-    statement = select(Order).options(selectinload(Order.items)).where(Order.id == order_id)
-    order = db.scalar(statement)
-    if order is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    return order
+    order = _fetch_order_by_id(db, order_id)
+    return OrderDetailResponse.from_order(order)
 
 
 def delete_order(db: Session, order_id: UUID) -> None:
     """Cancel an order by restoring stock and deleting it."""
     try:
-        order = get_order_by_id(db, order_id)
+        order = _fetch_order_by_id(db, order_id)
 
         quantity_by_product: dict[UUID, int] = defaultdict(int)
         for item in order.items:
